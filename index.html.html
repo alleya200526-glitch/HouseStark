@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guild & Roster Management System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        eyrie: { light: '#dbeafe', border: '#2563eb', text: '#1e40af', bg: '#1e3a8a' },
+                        casterly: { light: '#ffe4e6', border: '#e11d48', text: '#9f1239', bg: '#881337' },
+                        sunspear: { light: '#fef3c7', border: '#d97706', text: '#92400e', bg: '#78350f' },
+                        dragonstone: { light: '#dcfce7', border: '#16a34a', text: '#166534', bg: '#14532d' }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome & Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.5); }
+        
+        .glass-panel {
+            background-color: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+        }
+        .light .glass-panel {
+            background-color: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+        }
+
+        /* Strikethrough for inactive elders matching sheet */
+        .line-through-dim {
+            text-decoration: line-through;
+            opacity: 0.55;
+        }
+
+        @media print {
+            header, nav, .no-print { display: none !important; }
+            body { background: white !important; color: black !important; }
+            .print-full { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 light:bg-slate-100 text-slate-100 light:text-slate-900 min-h-screen flex flex-col transition-colors duration-200">
+
+    <!-- Navigation Header -->
+    <header class="no-print border-b border-slate-800 light:border-slate-200 bg-slate-900/90 light:bg-white/90 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-gradient-to-tr from-amber-500 via-sky-500 to-emerald-500 rounded-xl text-slate-950 font-black">
+                    <i class="fa-solid fa-shield-cat text-xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-base font-extrabold tracking-tight text-slate-100 light:text-slate-900">GUILD COMMAND CENTER</h1>
+                        <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-slate-800 light:bg-slate-200 text-sky-400 light:text-sky-700 border border-slate-700 light:border-slate-300">System v3.0</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 light:text-slate-500">Eyrie &bull; Casterlyrock &bull; Sunspear &bull; Dragonstone Roster</p>
+                </div>
+            </div>
+
+            <!-- Header Controls -->
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                
+                <!-- View Mode Selector -->
+                <div class="flex bg-slate-800 light:bg-slate-200 p-1 rounded-xl text-xs font-semibold">
+                    <button id="view-sheet-btn" class="px-3 py-1.5 rounded-lg text-white bg-sky-600 shadow transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-table-cells"></i> <span class="hidden md:inline">Sheet Grid</span>
+                    </button>
+                    <button id="view-kanban-btn" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 light:text-slate-700 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-columns"></i> <span class="hidden md:inline">Kanban</span>
+                    </button>
+                    <button id="view-table-btn" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 light:text-slate-700 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-list-check"></i> <span class="hidden md:inline">Data Table</span>
+                    </button>
+                </div>
+
+                <div class="h-6 w-px bg-slate-800 light:bg-slate-300"></div>
+
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="p-2.5 text-slate-400 hover:text-slate-100 light:text-slate-600 light:hover:text-slate-900 bg-slate-800 light:bg-slate-200 rounded-xl transition" title="Toggle Light/Dark Theme">
+                    <i class="fa-solid fa-sun text-amber-400 hidden dark:inline"></i>
+                    <i class="fa-solid fa-moon text-indigo-600 inline dark:hidden"></i>
+                </button>
+
+                <!-- System Actions Dropdown -->
+                <div class="relative inline-block">
+                    <button id="system-menu-btn" class="flex items-center space-x-2 bg-slate-800 light:bg-slate-200 hover:bg-slate-700 light:hover:bg-slate-300 px-3 py-2 rounded-xl text-xs font-semibold transition border border-slate-700 light:border-slate-300">
+                        <i class="fa-solid fa-sliders text-sky-400"></i>
+                        <span class="hidden sm:inline">System Data</span>
+                        <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                    </button>
+                    <div id="system-menu" class="hidden absolute right-0 mt-2 w-52 bg-slate-900 light:bg-white rounded-xl shadow-2xl border border-slate-800 light:border-slate-200 py-1 z-50 text-xs">
+                        <button id="export-csv-btn" class="w-full text-left px-4 py-2 hover:bg-slate-800 light:hover:bg-slate-100 flex items-center space-x-2">
+                            <i class="fa-solid fa-file-csv text-emerald-400"></i>
+                            <span>Export CSV Spreadsheet</span>
+                        </button>
+                        <button id="export-json-btn" class="w-full text-left px-4 py-2 hover:bg-slate-800 light:hover:bg-slate-100 flex items-center space-x-2">
+                            <i class="fa-solid fa-file-code text-amber-400"></i>
+                            <span>Backup System JSON</span>
+                        </button>
+                        <label class="w-full text-left px-4 py-2 hover:bg-slate-800 light:hover:bg-slate-100 flex items-center space-x-2 cursor-pointer">
+                            <i class="fa-solid fa-file-import text-sky-400"></i>
+                            <span>Import Backup JSON</span>
+                            <input type="file" id="import-json-input" accept=".json" class="hidden">
+                        </label>
+                        <div class="border-t border-slate-800 light:border-slate-200 my-1"></div>
+                        <button id="print-snapshot-btn" class="w-full text-left px-4 py-2 hover:bg-slate-800 light:hover:bg-slate-100 flex items-center space-x-2">
+                            <i class="fa-solid fa-print text-indigo-400"></i>
+                            <span>Print / PDF Snapshot</span>
+                        </button>
+                        <button id="reset-default-data-btn" class="w-full text-left px-4 py-2 hover:bg-rose-950/40 text-rose-400 flex items-center space-x-2">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            <span>Reset Original Sheet Data</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Add Member Button -->
+                <button id="open-add-member-btn" class="flex items-center space-x-2 bg-sky-600 hover:bg-sky-500 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition shadow-lg shadow-sky-600/20">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span class="hidden sm:inline">Add Member</span>
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- Main Dashboard Container -->
+    <main class="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 print-full">
+
+        <!-- Top KPI Stats Dashboard -->
+        <section class="no-print grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            
+            <!-- Eyrie Stat Card -->
+            <div class="glass-panel border-t-4 border-t-blue-600 border-x border-b border-slate-800 light:border-slate-200 rounded-2xl p-3.5 flex flex-col justify-between">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="text-[10px] font-black uppercase text-blue-400 tracking-wider">THE EYRIE</span>
+                        <h3 id="stat-eyrie-count" class="text-xl font-extrabold text-slate-100 light:text-slate-900 mt-0.5">0</h3>
+                    </div>
+                    <div class="p-2 bg-blue-500/10 text-blue-400 rounded-xl text-xs font-bold">
+                        <i class="fa-solid fa-feather-pointed"></i>
+                    </div>
+                </div>
+                <div class="mt-2 text-[11px] flex justify-between text-slate-400">
+                    <span>Active: <strong id="stat-eyrie-active" class="text-emerald-400">0</strong></span>
+                    <span>Inactive: <strong id="stat-eyrie-inactive" class="text-rose-400">0</strong></span>
+                </div>
+                <div class="w-full bg-slate-800 light:bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div id="stat-eyrie-bar" class="bg-blue-500 h-full w-0 transition-all"></div>
+                </div>
+            </div>
+
+            <!-- Casterlyrock Stat Card -->
+            <div class="glass-panel border-t-4 border-t-rose-600 border-x border-b border-slate-800 light:border-slate-200 rounded-2xl p-3.5 flex flex-col justify-between">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="text-[10px] font-black uppercase text-rose-400 tracking-wider">CASTERLYROCK</span>
+                        <h3 id="stat-casterly-count" class="text-xl font-extrabold text-slate-100 light:text-slate-900 mt-0.5">0</h3>
+                    </div>
+                    <div class="p-2 bg-rose-500/10 text-rose-400 rounded-xl text-xs font-bold">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                </div>
+                <div class="mt-2 text-[11px] flex justify-between text-slate-400">
+                    <span>Active: <strong id="stat-casterly-active" class="text-emerald-400">0</strong></span>
+                    <span>Inactive: <strong id="stat-casterly-inactive" class="text-rose-400">0</strong></span>
+                </div>
+                <div class="w-full bg-slate-800 light:bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div id="stat-casterly-bar" class="bg-rose-500 h-full w-0 transition-all"></div>
+                </div>
+            </div>
+
+            <!-- Sunspear Stat Card -->
+            <div class="glass-panel border-t-4 border-t-amber-500 border-x border-b border-slate-800 light:border-slate-200 rounded-2xl p-3.5 flex flex-col justify-between">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="text-[10px] font-black uppercase text-amber-400 tracking-wider">SUNSPEAR</span>
+                        <h3 id="stat-sunspear-count" class="text-xl font-extrabold text-slate-100 light:text-slate-900 mt-0.5">0</h3>
+                    </div>
+                    <div class="p-2 bg-amber-500/10 text-amber-400 rounded-xl text-xs font-bold">
+                        <i class="fa-solid fa-sun"></i>
+                    </div>
+                </div>
+                <div class="mt-2 text-[11px] flex justify-between text-slate-400">
+                    <span>Active: <strong id="stat-sunspear-active" class="text-emerald-400">0</strong></span>
+                    <span>Inactive: <strong id="stat-sunspear-inactive" class="text-rose-400">0</strong></span>
+                </div>
+                <div class="w-full bg-slate-800 light:bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div id="stat-sunspear-bar" class="bg-amber-500 h-full w-0 transition-all"></div>
+                </div>
+            </div>
+
+            <!-- Dragonstone Stat Card -->
+            <div class="glass-panel border-t-4 border-t-emerald-600 border-x border-b border-slate-800 light:border-slate-200 rounded-2xl p-3.5 flex flex-col justify-between">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="text-[10px] font-black uppercase text-emerald-400 tracking-wider">DRAGONSTONE</span>
+                        <h3 id="stat-dragonstone-count" class="text-xl font-extrabold text-slate-100 light:text-slate-900 mt-0.5">0</h3>
+                    </div>
+                    <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl text-xs font-bold">
+                        <i class="fa-solid fa-dragon"></i>
+                    </div>
+                </div>
+                <div class="mt-2 text-[11px] flex justify-between text-slate-400">
+                    <span>Active: <strong id="stat-dragonstone-active" class="text-emerald-400">0</strong></span>
+                    <span>Inactive: <strong id="stat-dragonstone-inactive" class="text-rose-400">0</strong></span>
+                </div>
+                <div class="w-full bg-slate-800 light:bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div id="stat-dragonstone-bar" class="bg-emerald-500 h-full w-0 transition-all"></div>
+                </div>
+            </div>
+
+            <!-- Overall Guild Total Summary Card -->
+            <div class="glass-panel border border-slate-800 light:border-slate-200 rounded-2xl p-3.5 flex flex-col justify-between bg-gradient-to-br from-slate-900 to-slate-800">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="text-[10px] font-black uppercase text-sky-400 tracking-wider">TOTAL GUILD ROSTER</span>
+                        <h3 id="stat-total-members" class="text-2xl font-black text-white mt-0.5">0</h3>
+                    </div>
+                    <div class="p-2 bg-sky-500/20 text-sky-300 rounded-xl text-xs font-bold">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                </div>
+                <div class="mt-2 flex items-center justify-between text-[11px] text-slate-300">
+                    <span>Active Ratio:</span>
+                    <strong id="stat-overall-active-pct" class="text-emerald-400">0%</strong>
+                </div>
+                <div class="w-full bg-slate-950 h-2 rounded-full mt-2 overflow-hidden border border-slate-700">
+                    <div id="stat-overall-bar" class="bg-gradient-to-r from-emerald-500 via-sky-400 to-indigo-500 h-full w-0 transition-all"></div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- System Search, Date & Filter Bar -->
+        <section class="no-print glass-panel border border-slate-800 light:border-slate-200 rounded-2xl p-4 space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                
+                <!-- Search Box -->
+                <div class="md:col-span-4 relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" id="search-input" placeholder="Search member, handle, rank, or house..." 
+                           class="w-full bg-slate-900/90 light:bg-white border border-slate-700 light:border-slate-300 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-100 light:text-slate-800 placeholder-slate-400 focus:outline-none focus:border-sky-500">
+                    <button id="clear-search-btn" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 text-xs">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- House Filter -->
+                <div class="md:col-span-2">
+                    <select id="filter-house" class="w-full bg-slate-900/90 light:bg-white border border-slate-700 light:border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-200 light:text-slate-800 focus:outline-none focus:border-sky-500">
+                        <option value="all">All Houses</option>
+                        <option value="The Eyrie">The Eyrie</option>
+                        <option value="Casterlyrock">Casterlyrock</option>
+                        <option value="Sunspear">Sunspear</option>
+                        <option value="Dragonstone">Dragonstone</option>
+                    </select>
+                </div>
+
+                <!-- Rank Filter -->
+                <div class="md:col-span-2">
+                    <select id="filter-rank" class="w-full bg-slate-900/90 light:bg-white border border-slate-700 light:border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-200 light:text-slate-800 focus:outline-none focus:border-sky-500">
+                        <option value="all">All Ranks</option>
+                        <option value="Leadership">Leadership (Dep/Adm/Ast)</option>
+                        <option value="Elders">Elders</option>
+                        <option value="Pups">Pups / Members</option>
+                    </select>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="md:col-span-2">
+                    <select id="filter-status" class="w-full bg-slate-900/90 light:bg-white border border-slate-700 light:border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-200 light:text-slate-800 focus:outline-none focus:border-sky-500">
+                        <option value="all">All Statuses</option>
+                        <option value="Active">Active Only</option>
+                        <option value="Inactive">Inactive Only</option>
+                    </select>
+                </div>
+
+                <!-- Auto Inactivity Days Threshold -->
+                <div class="md:col-span-2">
+                    <select id="filter-inactivity-days" class="w-full bg-slate-900/90 light:bg-white border border-slate-700 light:border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-200 light:text-slate-800 focus:outline-none focus:border-sky-500" title="Set Auto Inactive Threshold">
+                        <option value="7">Inactive Threshold: 7 Days</option>
+                        <option value="14" selected>Inactive Threshold: 14 Days</option>
+                        <option value="30">Inactive Threshold: 30 Days</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <!-- Date Range Controls -->
+            <div class="pt-2 border-t border-slate-800 light:border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-slate-400 font-medium flex items-center gap-1">
+                        <i class="fa-regular fa-calendar-days text-sky-400"></i> Date Active Range:
+                    </span>
+                    <input type="date" id="date-from" class="bg-slate-900 light:bg-white border border-slate-700 light:border-slate-300 rounded-lg px-2.5 py-1 text-slate-200 light:text-slate-800">
+                    <span class="text-slate-500">to</span>
+                    <input type="date" id="date-to" class="bg-slate-900 light:bg-white border border-slate-700 light:border-slate-300 rounded-lg px-2.5 py-1 text-slate-200 light:text-slate-800">
+                    <button id="reset-filters-btn" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition text-[11px]">
+                        <i class="fa-solid fa-rotate-left mr-1"></i>Reset Filters
+                    </button>
+                </div>
+
+                <div class="text-[11px] text-slate-400">
+                    Active Criteria: <span id="threshold-label" class="text-sky-400 font-semibold">14 Days</span> without activity flags member inactive.
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 1: Authentic Spreadsheet Grid (Matching Provided Screenshot Layout) -->
+        <section id="view-sheet-container" class="space-y-4">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                <!-- HOUSE 1: THE EYRIE -->
+                <div class="bg-slate-900 light:bg-white rounded-xl border-2 border-blue-600/80 shadow-xl overflow-hidden flex flex-col">
+                    <!-- Header -->
+                    <div class="bg-blue-700 text-white font-extrabold px-3 py-2 text-sm uppercase tracking-wider flex justify-between items-center shadow-inner">
+                        <span>THE EYRIE</span>
+                        <i class="fa-solid fa-feather-pointed"></i>
+                    </div>
+
+                    <!-- Leadership Tier -->
+                    <div class="bg-blue-950/40 light:bg-blue-50/50 p-2.5 space-y-1.5 border-b border-blue-900/50 text-xs">
+                        <div id="eyrie-dep" class="flex items-center space-x-2 text-blue-300 light:text-blue-900 font-bold">
+                            <!-- Dynamic Dep -->
+                        </div>
+                        <div id="eyrie-adm-1" class="flex items-center space-x-2 text-slate-200 light:text-slate-800">
+                            <!-- Dynamic Adm 1 -->
+                        </div>
+                        <div id="eyrie-adm-2" class="flex items-center space-x-2 text-slate-200 light:text-slate-800">
+                            <!-- Dynamic Adm 2 -->
+                        </div>
+                        <div id="eyrie-ast" class="flex items-center space-x-2 text-slate-300 light:text-slate-700 italic">
+                            <!-- Dynamic Ast -->
+                        </div>
+                    </div>
+
+                    <!-- Members Section Bar -->
+                    <div class="bg-black text-white text-[11px] font-black uppercase text-center py-1 tracking-widest border-y border-slate-800">
+                        MEMBERS
+                    </div>
+
+                    <!-- Elders Tier -->
+                    <div class="p-3 border-b border-slate-800 light:border-slate-200 bg-slate-900/50 light:bg-slate-50">
+                        <h4 class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 border-b border-slate-800 pb-1">ELDERS</h4>
+                        <div id="eyrie-elders-grid" class="grid grid-cols-2 gap-x-2 gap-y-1 text-xs font-semibold">
+                            <!-- Dynamic Elders -->
+                        </div>
+                    </div>
+
+                    <!-- Pups Tier -->
+                    <div class="p-3 flex-1 flex flex-col">
+                        <h4 class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 border-b border-slate-800 pb-1">PUPS</h4>
+                        
+                        <!-- Counters Header -->
+                        <div class="grid grid-cols-2 gap-2 mb-3 bg-slate-950 light:bg-slate-200 p-2 rounded-lg text-center border border-slate-800">
+                            <div>
+                                <span class="text-[10px] text-slate-400 block font-bold">Active:</span>
+                                <span id="eyrie-active-count" class="text-base font-black text-emerald-400">0</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-slate-400 block font-bold">Inactive:</span>
+                                <span id="eyrie-inactive-count" class="text-base font-black text-rose-400">0</span>
+                            </div>
+                        </div>
+
+                        <!-- Active / Inactive Dual Columns -->
+                        <div class="grid grid-cols-2 gap-3 flex-1 text-xs">
+                            <div id="eyrie-pups-active" class="space-y-1 font-bold text-slate-200 light:text-slate-800">
+                                <!-- Dynamic Active Pups -->
+                            </div>
+                            <div id="eyrie-pups-inactive" class="space-y-1 font-semibold text-slate-400 light:text-slate-500">
+                                <!-- Dynamic Inactive Pups -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HOUSE 2: CASTERLYROCK -->
+                <div class="bg-slate-900 light:bg-white rounded-xl border-2 border-rose-600/80 shadow-xl overflow-hidden flex flex-col">
+                    <!-- Header -->
+                    <div class="bg-rose-700 text-white font-extrabold px-3 py-2 text-sm uppercase tracking-wider flex justify-between items-center shadow-inner">
+                        <span>CASTERLYROCK</span>
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+
+                    <!-- Leadership Tier -->
+                    <div class="bg-rose-950/40 light:bg-rose-50/50 p-2.5 space-y-1.5 border-b border-rose-900/50 text-xs">
+                        <div id="casterly-dep" class="flex items-center space-x-2 text-rose-300 light:text-rose-900 font-bold"></div>
+                        <div id="casterly-adm-1" class="flex items-center space-x-2 text-slate-200 light:text-slate-800"></div>
+                        <div id="casterly-adm-2" class="flex items-center space-x-2 text-slate-200 light:text-slate-800"></div>
+                        <div id="casterly-ast" class="flex items-center space-x-2 text-slate-300 light:text-slate-700 italic"></div>
+                    </div>
+
+                    <!-- Members Section Bar -->
+                    <div class="bg-black text-white text-[11px] font-black uppercase text-center py-1 tracking-widest border-y border-slate-800">
+                        MEMBERS
+                    </div>
+
+                    <!-- Elders Tier -->
+                    <div class="p-3 border-b border-slate-800 light:border-slate-200 bg-slate-900/50 light:bg-slate-50">
+                        <h4 class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 border-b border-slate-800 pb-1">ELDERS</h4>
+                        <div id="casterly-elders-grid" class="grid grid-cols-2 gap-x-2 gap-y-1 text-xs font-semibold"></div>
+                    </div>
+
+                    <!-- Pups Tier -->
+                    <div class="p-3 flex-1 flex flex-col">
+                        <h4 class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 border-b border-slate-800 pb-1">PUPS</h4>
+                        
+                        <!-- Counters Header -->
+                        <div class="grid grid-cols-2 gap-2 mb-3 bg-slate-950 light:bg-slate-200 p-2 rounded-lg text-center border border-slate-800">
+                            <div>
+                                <span class="text-[10px] text-slate-400 block font-bold">Active:</span>
+                                <span id="casterly-active-count" class="text-base font-black text-emerald-400">0</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-slate-400 block font-bold">Inactive:</span>
+                                <span id="casterly-inactive-count" class="text-base font-black text-rose-400">0</span>
+                            </div>
+                        </div>
+
+                        <!-- Active / Inactive Dual Columns -->
+                        <div class="grid grid-cols-2 gap-3 flex-1 text-xs">
+                            <div id="casterly-pups-active" class="space-y-1 font-bold text-slate-200 light:text-slate-800"></div>
+                            <div id="casterly-pups-inactive" class="space-y-1 font-semibold text-slate-400 light:text-slate-500"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HOUSE 3: SUNSPEAR -->
+                <div class="bg-slate-900 light:bg-white rounded-xl border-2 border-amber-500/80 shadow-xl overflow-hidden flex flex-col">
+                    <!-- Header -->
+                    <div class="bg-amber-600 text-white font-extrabold px-3 py-2 text-sm uppercase tracking-wider flex justify-between items-center shadow-inner">
+                        <span>SUNSPEAR</span>
+                        <i class="fa-solid fa-sun"></i>
+                    </div>
+
+                    <!-- Leadership Tier -->
+                    <div class="bg-amber-950/40 light:bg-amber-50/50 p-2.5 space-y-1.5 border-b border-amber-900/50 text-xs">
+                        <div id="sunspear-dep" class="flex items-center space-x-2 text-amber-300 light:text-amber-900 font-bold"></div>
+                        <div id="sunspear-adm-1" class="flex items-center space-x-2 text-slate-200 light:text-slate-800"></div>
+                        <div id="sunspear-adm-2" class="flex items-center space-x-2 text-slate-200 light:text-slate-800"></div>
+                        <div id="sunspear-ast" class="flex items-center space-x-2 text-slate-300 light:text-slate-700 italic"></div>
+                    </div>
+
+                    <!-- Members Section Bar -->
+                    <div class="bg-black text-white text-[11px] font-black uppercase text-center py-1 tracking-widest border-y border-slate-800">
+                        MEMBERS
+                    </div>
+
+                    <!-- Elders Tier -->
+                    <div class="p-3 border-b border-slate-800 light:border-slate-200 bg-slate-900/50 light:bg-slate-50">
+                        <h4 class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 border-b border-slate-800 pb-1">ELDERS</h4>
+                        <div id="sunspear-elders-grid" class="grid grid-cols-2 gap-x-2 gap-y-1 text-xs font-semibold"></div>
+                    </div>
+
+                    <!-- Pups Tier -->
+                    <div class="p-3 flex-1 flex flex-col">
+                        <h4 class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 border-b border-slate-800 pb-1">PUPS</h4>
+                        
+                        <!-- Counters Header -->
+                        <div class="grid grid-cols-2 gap-2 mb-3 bg-slate-950 light:bg-slate-200 p-2 rounded-lg text-center border border-slate-800">
+                            <div>
+                                <span class="text-[10px] text-slate-400 block font-bold">Active:</span>
+                                <span id="sunspear-active-count" class="text-base font-black text-emerald-400">0</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-slate-400 block font-bold">Inactive:</span>
+                                <span id="sunspear-inactive-count" class="text-base font-black text-rose-400">0</span>
+                            </div>
+                        </div>
+
+                        <!-- Active / Inactive Dual Columns -->
+                        <div class="grid grid-cols-2 gap-3 flex-1 text-xs">
+                            <div id="sunspear-pups-active" class="space-y-1 font-bold text-slate-200 light:text-slate-800"></div>
+                            <div id="sunspear-pups-inactive" class="space-y-1 font-semibold text-slate-400 light:text-slate-500"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HOUSE 4: DRAGONSTONE -->
+                <div class="bg-slate-900 light:bg-white rounded-xl border-2 border-emerald-600/80 shadow-xl overflow-hidden flex flex-col">
+                    <!-- Header -->
+                    <div class="bg-emerald-700 text-white font-extrabold px-3 py-2 text-sm uppercase tracking-wider flex justify-between items-center shadow-inner">
+                        <span>DRAGONSTONE</span>
+                        <i class="fa-solid fa-dragon"></i>
+                    </div>
+
+                    <!-- Leadership Tier -->
+                    <div class="bg-emerald-950/40 light:bg-emerald-50/50 p-2.5 space-y-1.5 border-b border-emerald-900/50 text-xs">
+                        <div id="dragonstone-dep" class="flex items-center space-x-2 text-emerald-300 light:text-emerald-900 font-bold"></div>
+                        <div id="dragonstone-adm-1" class="flex items-center space-x-2 text-slate-200 light:text-slate-800"></div>
+                        <div id="dragonstone-adm-2" class="flex items-center space-x-2 text-slate-200 light:text-slate-800"></div>
+                        <div id="dragonstone-ast" class="flex items-center space-x-2 text-slate-300 light:text-slate-700 italic"></div>
+                    </div>
+
+                    <!-- Members Section Bar -->
+                    <div class="bg-black text-white text-[11px] font-black uppercase text-center py-1 tracking-widest border-y border-slate-800">
+                        MEMBERS
+                    </div>
+
+                    <!-- Elders Tier -->
+                    <div class="p-3 border-b border-slate-800 light:border-slate-200 bg-slate-900/50 light:bg-slate-50">
+                        <h4 class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 border-b border-slate-800 pb-1">ELDERS</h4>
+                        <div id="dragonstone-elders-grid" class="grid grid-cols-2 gap-x-2 gap-y-1 text-xs font-semibold"></div>
+                    </div>
+
+                    <!-- Pups Tier -->
+                    <div class="p-3 flex-1 flex flex-col">
+                        <h4 class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 border-b border-slate-800 pb-1">PUPS</h4>
+                        
+                        <!-- Counters Header -->
+                        <div class="grid grid-cols-2 gap-2 mb-3 bg-slate-950 light:bg-slate-200 p-2 rounded-lg text-center border border-slate-800">
+                            <div>
+                                <span class="text-[10px] text-slate-400 block font-bold">Active:</span>
+                                <span id="dragonstone-active-count" class="text-base font-black text-emerald-400">0</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-slate-400 block font-bold">Inactive:</span>
+                                <span id="dragonstone-inactive-count" class="text-base font-black text-rose-400">0</span>
+                            </div>
+                        </div>
+
+                        <!-- Active / Inactive Dual Columns -->
+                        <div class="grid grid-cols-2 gap-3 flex-1 text-xs">
+                            <div id="dragonstone-pups-active" class="space-y-1 font-bold text-slate-200 light:text-slate-800"></div>
+                            <div id="dragonstone-pups-inactive" class="space-y-1 font-semibold text-slate-400 light:text-slate-500"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- VIEW 2: Kanban Board View -->
+        <section id="view-kanban-container" class="hidden">
+            <div id="kanban-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Dynamic Kanban columns for 4 Houses -->
+            </div>
+        </section>
+
+        <!-- VIEW 3: Detailed Data Table View -->
+        <section id="view-table-container" class="hidden glass-panel border border-slate-800 light:border-slate-200 rounded-2xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-300 light:text-slate-700">
+                    <thead class="bg-slate-900 light:bg-slate-200 text-slate-400 light:text-slate-600 font-bold uppercase tracking-wider text-[11px] border-b border-slate-800">
+                        <tr>
+                            <th class="py-3 px-4">Member Name</th>
+                            <th class="py-3 px-4">House / Faction</th>
+                            <th class="py-3 px-4">Tier / Rank</th>
+                            <th class="py-3 px-4">Leadership Tag</th>
+                            <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4">Last Active</th>
+                            <th class="py-3 px-4">Inactivity Duration</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-view-tbody" class="divide-y divide-slate-800/80 light:divide-slate-200">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Detailed Member View & Audit Log Modal -->
+    <div id="member-details-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-slate-900 light:bg-white border border-slate-800 light:border-slate-200 rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-800 light:border-slate-200 flex justify-between items-center bg-slate-900/80 light:bg-slate-50">
+                <div class="flex items-center space-x-3">
+                    <div id="modal-member-avatar" class="w-10 h-10 rounded-full bg-sky-600 text-white flex items-center justify-center font-bold text-base">
+                        M
+                    </div>
+                    <div>
+                        <h3 id="modal-member-name" class="text-base font-extrabold text-slate-100 light:text-slate-900">Member Name</h3>
+                        <p id="modal-member-house-rank" class="text-xs text-slate-400">The Eyrie &bull; Pup</p>
+                    </div>
+                </div>
+                <button id="close-details-modal-btn" class="text-slate-400 hover:text-slate-200 text-lg transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="p-6 space-y-5 text-xs">
+                
+                <!-- Status Badges Bar -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-slate-800/60 light:bg-slate-100 p-3 rounded-xl border border-slate-700/50">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase">Status State</span>
+                        <div id="modal-member-status" class="mt-1"></div>
+                    </div>
+                    <div class="bg-slate-800/60 light:bg-slate-100 p-3 rounded-xl border border-slate-700/50">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase">Last Active</span>
+                        <div id="modal-member-last-active" class="mt-1 font-bold text-slate-200 light:text-slate-800"></div>
+                    </div>
+                    <div class="bg-slate-800/60 light:bg-slate-100 p-3 rounded-xl border border-slate-700/50">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase">Inactivity Span</span>
+                        <div id="modal-member-inactivity-span" class="mt-1 font-bold text-amber-400"></div>
+                    </div>
+                </div>
+
+                <!-- Audit Log Timeline -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-timeline text-sky-400"></i> Audit Log & Roster History
+                    </h4>
+                    <div id="modal-member-logs" class="space-y-2 border-l-2 border-slate-800 light:border-slate-300 ml-2 pl-3 max-h-48 overflow-y-auto">
+                        <!-- Dynamic Logs -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-slate-800 light:border-slate-200 bg-slate-900/80 light:bg-slate-50 flex justify-between items-center">
+                <button id="modal-toggle-status-btn" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-power-off"></i> Toggle Active / Inactive
+                </button>
+                <div class="flex items-center gap-2">
+                    <button id="modal-edit-btn" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-semibold border border-slate-700">
+                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                    </button>
+                    <button id="modal-delete-btn" class="px-3 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 rounded-xl font-semibold border border-rose-500/30">
+                        <i class="fa-solid fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Add / Edit Member Modal Form -->
+    <div id="member-form-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-slate-900 light:bg-white border border-slate-800 light:border-slate-200 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden">
+            
+            <div class="px-6 py-4 border-b border-slate-800 light:border-slate-200 flex justify-between items-center bg-slate-900/80 light:bg-slate-50">
+                <h3 id="form-modal-title" class="text-sm font-extrabold text-slate-100 light:text-slate-900">Add Guild Member</h3>
+                <button id="close-form-modal-btn" class="text-slate-400 hover:text-slate-200 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="member-form" class="p-6 space-y-4 text-xs">
+                <input type="hidden" id="form-member-id">
+
+                <div>
+                    <label class="block font-bold text-slate-300 light:text-slate-700 mb-1">Member Name / Handle *</label>
+                    <input type="text" id="form-name" required placeholder="e.g. ZHACHI or Dep. Liya"
+                           class="w-full bg-slate-800 light:bg-slate-100 border border-slate-700 light:border-slate-300 rounded-xl px-3 py-2 text-slate-100 light:text-slate-900 focus:outline-none focus:border-sky-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-300 light:text-slate-700 mb-1">House / Faction *</label>
+                        <select id="form-house" class="w-full bg-slate-800 light:bg-slate-100 border border-slate-700 light:border-slate-300 rounded-xl px-3 py-2 text-slate-100 light:text-slate-900 focus:outline-none focus:border-sky-500">
+                            <option value="The Eyrie">The Eyrie</option>
+                            <option value="Casterlyrock">Casterlyrock</option>
+                            <option value="Sunspear">Sunspear</option>
+                            <option value="Dragonstone">Dragonstone</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-slate-300 light:text-slate-700 mb-1">Rank Tier *</label>
+                        <select id="form-rank" class="w-full bg-slate-800 light:bg-slate-100 border border-slate-700 light:border-slate-300 rounded-xl px-3 py-2 text-slate-100 light:text-slate-900 focus:outline-none focus:border-sky-500">
+                            <option value="Leadership">Leadership</option>
+                            <option value="Elders">Elders</option>
+                            <option value="Pups" selected>Pups / Member</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-300 light:text-slate-700 mb-1">Leadership Role Tag</label>
+                        <select id="form-lead-tag" class="w-full bg-slate-800 light:bg-slate-100 border border-slate-700 light:border-slate-300 rounded-xl px-3 py-2 text-slate-100 light:text-slate-900 focus:outline-none focus:border-sky-500">
+                            <option value="">None (Regular)</option>
+                            <option value="Dep.">Dep. (Deputy)</option>
+                            <option value="Adm.">Adm. (Admin)</option>
+                            <option value="Ast.">Ast. (Assistant)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-slate-300 light:text-slate-700 mb-1">Active Status *</label>
+                        <select id="form-status" class="w-full bg-slate-800 light:bg-slate-100 border border-slate-700 light:border-slate-300 rounded-xl px-3 py-2 text-slate-100 light:text-slate-900 focus:outline-none focus:border-sky-500">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-300 light:text-slate-700 mb-1">Last Active Date</label>
+                    <input type="date" id="form-last-active" class="w-full bg-slate-800 light:bg-slate-100 border border-slate-700 light:border-slate-300 rounded-xl px-3 py-2 text-slate-100 light:text-slate-900 focus:outline-none focus:border-sky-500">
+                </div>
+
+                <div class="pt-3 border-t border-slate-800 light:border-slate-200 flex justify-end space-x-2">
+                    <button type="button" id="cancel-form-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold shadow-lg shadow-sky-600/20">Save Member</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    <!-- Notification Toast Banner -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex items-center space-x-2.5 bg-slate-900 light:bg-white border border-slate-700 light:border-slate-300 text-slate-100 light:text-slate-800 px-4 py-3 rounded-2xl shadow-2xl text-xs">
+        <i id="toast-icon" class="fa-solid fa-circle-info text-sky-400 text-base"></i>
+        <span id="toast-msg">Notification Message</span>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'guild_roster_system_v3';
+
+        // Helper date offsets
+        function daysAgoIso(days) {
+            return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        }
+
+        // Exact Initial Roster extracted directly from provided screenshot image context
+        const defaultRoster = [
+            // --- THE EYRIE (Blue) ---
+            { id: 'EYR-01', name: 'Liya', house: 'The Eyrie', rank: 'Leadership', leadTag: 'Dep.', status: 'Active', lastActive: daysAgoIso(0), logs: [{ action: 'Assigned Dep. of The Eyrie', date: daysAgoIso(60) }] },
+            { id: 'EYR-02', name: 'Python', house: 'The Eyrie', rank: 'Leadership', leadTag: 'Adm.', status: 'Active', lastActive: daysAgoIso(1), logs: [{ action: 'Assigned Adm.', date: daysAgoIso(60) }] },
+            { id: 'EYR-03', name: 'Primo', house: 'The Eyrie', rank: 'Leadership', leadTag: 'Adm.', status: 'Active', lastActive: daysAgoIso(2), logs: [{ action: 'Assigned Adm.', date: daysAgoIso(60) }] },
+            { id: 'EYR-04', name: 'Needy', house: 'The Eyrie', rank: 'Leadership', leadTag: 'Ast.', status: 'Active', lastActive: daysAgoIso(0), logs: [{ action: 'Assigned Assistant', date: daysAgoIso(60) }] },
+            
+            { id: 'EYR-05', name: 'THEA', house: 'The Eyrie', rank: 'Elders', leadTag: '', status: 'Active', lastActive: daysAgoIso(1), logs: [] },
+            { id: 'EYR-06', name: 'JOHNNY', house: 'The Eyrie', rank: 'Elders', leadTag: '', status: 'Inactive', lastActive: daysAgoIso(20), logs: [] },
+            { id: 'EYR-07', name: 'YANYAN', house: 'The Eyrie', rank: 'Elders', leadTag: '', status: 'Inactive', lastActive: daysAgoIso(25), logs: [] },
+            { id: 'EYR-08', name: 'AJ', house: 'The Eyrie', rank: 'Elders', leadTag: '', status: 'Inactive', lastActive: daysAgoIso(18), logs: [] },
+            { id: 'EYR-09', name: 'SABOO', house: 'The Eyrie', rank: 'Elders', leadTag: '', status: 'Inactive', lastActive: daysAgoIso(22), logs: [] },
+            { id: 'EYR-10', name: 'SE55', house: 'The Eyrie', rank: 'Elders', leadTag: '', status: 'Inactive', lastActive: daysAgoIso(19), logs: [] },
+            { id: 'EYR-11', name: 'HONEY', house: 'The Eyrie', rank: 'Elders', leadTag: '', status: 'Inactive', lastActive: daysAgoIso(30), logs: [] },
+
+            // Eyrie Active Pups (18)
+            ...['ZHACHI', 'SILI', 'PRIX', 'ALY', 'LALIN', 'ISH', 'RAIN', 'CHOCO', 'WORLY', 'DUKE', 'MAVIS (guy)', 'SHANE', 'MICHII', 'KZEN', 'EUNJI', 'FRAIZER', 'FAYE', 'SCYLLA'].map((n, i) => ({
+                id: `EYR-P-A${i+1}`, name: n, house: 'The Eyrie', rank: 'Pups', leadTag: '', status: 'Active', lastActive: daysAgoIso(i % 5), logs: []
+            })),
+            // Eyrie Inactive Pups (5)
+            ...['CAT', 'AUTUMN', 'SANJI', 'KIT', 'BUTTER/PEANUT'].map((n, i) => ({
+                id: `EYR-P-I${i+1}`, name: n, house: 'The Eyrie', rank: 'Pups', leadTag: '', status: 'Inactive', lastActive: daysAgoIso(16 + i * 3), logs: []
+            })),
+
+            // --- CASTERLYROCK (Red/Pink) ---
+            { id: 'CST-01', name: 'Mavis', house: 'Casterlyrock', rank: 'Leadership', leadTag: 'Dep.', status: 'Active', lastActive: daysAgoIso(0), logs: [] },
+            { id: 'CST-02', name: 'Majim', house: 'Casterlyrock', rank: 'Leadership', leadTag: 'Adm.', status: 'Active', lastActive: daysAgoIso(1), logs: [] },
+            { id: 'CST-03', name: 'Dutch', house: 'Casterlyrock', rank: 'Leadership', leadTag: 'Adm.', status: 'Active', lastActive: daysAgoIso(0), logs: [] },
+            { id: 'CST-04', name: 'Ast', house: 'Casterlyrock', rank: 'Leadership', leadTag: 'Ast.', status: 'Active', lastActive: daysAgoIso(2), logs: [] },
+
+            // Elders (All inactive strikethrough in screenshot)
+            ...['BARBIELAT', 'BREDEN', 'GEIKI', 'LIEBE', 'MOIST', 'BLUE', 'PRIMO'].map((n, i) => ({
+                id: `CST-E-${i+1}`, name: n, house: 'Casterlyrock', rank: 'Elders', leadTag: '', status: 'Inactive', lastActive: daysAgoIso(18 + i), logs: []
+            })),
+
+            // Casterlyrock Active Pups (20)
+            ...['KENN', 'ANNE', 'KAYE', 'SHIN', 'AYAKA', 'FUMIKO', 'VENJ', 'OKARUN', 'MIMI', 'AKIKO', 'WILL', 'CHRIS', 'REN', 'YNNAH', 'KUTIII', 'MATCHY', 'BABS', 'HUXLEY', 'SEYTAN', 'MR.WHITE'].map((n, i) => ({
+                id: `CST-P-A${i+1}`, name: n, house: 'Casterlyrock', rank: 'Pups', leadTag: '', status: 'Active', lastActive: daysAgoIso(i % 4), logs: []
+            })),
+
+            // --- SUNSPEAR (Orange/Gold) ---
+            { id: 'SUN-01', name: 'Winter', house: 'Sunspear', rank: 'Leadership', leadTag: 'Dep.', status: 'Active', lastActive: daysAgoIso(0), logs: [] },
+            { id: 'SUN-02', name: 'Mark', house: 'Sunspear', rank: 'Leadership', leadTag: 'Adm.', status: 'Active', lastActive: daysAgoIso(0), logs: [] },
+            { id: 'SUN-03', name: 'Nasia', house: 'Sunspear', rank: 'Leadership', leadTag: 'Adm.', status: 'Active', lastActive: daysAgoIso(1), logs: [] },
+            { id: 'SUN-04', name: 'Ashle', house: 'Sunspear', rank: 'Leadership', leadTag: 'Ast.', status: 'Active', lastActive: daysAgoIso(2), logs: [] },
+
+            // Elders
+            { id: 'SUN-E-1', name: 'ZEB', house: 'Sunspear', rank: 'Elders', leadTag: '', status: 'Active', lastActive: daysAgoIso(1), logs: [] },
+            { id: 'SUN-E-2', name: 'KYOHEI', house: 'Sunspear', rank: 'Elders', leadTag: '', status: 'Active', lastActive: daysAgoIso(3), logs: [] },
+            ...['KALI', 'PUROCIN', 'PIPAY', 'KELI'].map((n, i) => ({
+                id: `SUN-E-I${i+1}`, name: n, house: 'Sunspear', rank: 'Elders', leadTag: '', status: 'Inactive', lastActive: daysAgoIso(20 + i), logs: []
+            })),
+
+            // Sunspear Active Pups (17)
+            ...['BELLATAN', 'LEIYN', 'DREW', 'JACE/CONAN', 'ABBY', 'LANA', 'ANNA', 'GEL', 'ELISE', 'KRYSTAL', 'MAEVE', 'MIRA SON', 'PENY', 'HERO', 'SELE', 'FIORA', 'EIA'].map((n, i) => ({
+                id: `SUN-P-A${i+1}`, name: n, house: 'Sunspear', rank: 'Pups', leadTag: '', status: 'Active', lastActive: daysAgoIso(i % 6), logs: []
+            })),
+            // Sunspear Inactive Pups (2)
+            ...['DARK', 'JD'].map((n, i) => ({
+                id: `SUN-P-I${i+1}`, name: n, house: 'Sunspear', rank: 'Pups', leadTag: '', status: 'Inactive', lastActive: daysAgoIso(15 + i * 2), logs: []
+            })),
+
+            // --- DRAGONSTONE (Green) ---
+            { id: 'DRG-01', name: 'Ange', house: 'Dragonstone', rank: 'Leadership', leadTag: 'Dep.', status: 'Active', lastActive: daysAgoIso(0), logs: [] },
+            { id: 'DRG-02', name: 'Neru', house: 'Dragonstone', rank: 'Leadership', leadTag: 'Adm.', status: 'Active', lastActive: daysAgoIso(1), logs: [] },
+            { id: 'DRG-03', name: 'Chaa', house: 'Dragonstone', rank: 'Leadership', leadTag: 'Adm.', status: 'Active', lastActive: daysAgoIso(0), logs: [] },
+            { id: 'DRG-04', name: 'Ast.', house: 'Dragonstone', rank: 'Leadership', leadTag: 'Ast.', status: 'Active', lastActive: daysAgoIso(1), logs: [] },
+
+            // Elders
+            { id: 'DRG-E-1', name: 'Z / ZERA', house: 'Dragonstone', rank: 'Elders', leadTag: '', status: 'Active', lastActive: daysAgoIso(2), logs: [] },
+            ...['AGHERA', 'TAP', 'MAUIN', 'LILI', 'OOLA / IGHII'].map((n, i) => ({
+                id: `DRG-E-I${i+1}`, name: n, house: 'Dragonstone', rank: 'Elders', leadTag: '', status: 'Inactive', lastActive: daysAgoIso(18 + i), logs: []
+            })),
+
+            // Dragonstone Active Pups (18)
+            ...['AEE / TOXICITY', 'YVAN', 'NVH / KY', 'YURI', 'KASUMI', 'KAI', 'ARES', 'PORTIA', 'WUZZUP', 'CLEO', 'AYAME', 'HERA', 'KEN', 'ZEA', 'BEAUTY', 'SHANKZ', 'GAB', 'EUN'].map((n, i) => ({
+                id: `DRG-P-A${i+1}`, name: n, house: 'Dragonstone', rank: 'Pups', leadTag: '', status: 'Active', lastActive: daysAgoIso(i % 5), logs: []
+            })),
+            // Dragonstone Inactive Pups (3)
+            ...['OWEN', 'TINZ'].map((n, i) => ({
+                id: `DRG-P-I${i+1}`, name: n, house: 'Dragonstone', rank: 'Pups', leadTag: '', status: 'Inactive', lastActive: daysAgoIso(17 + i), logs: []
+            }))
+        ];
+
+        // System State
+        let members = [];
+        let currentView = 'sheet';
+        let searchQuery = '';
+        let houseFilter = 'all';
+        let rankFilter = 'all';
+        let statusFilter = 'all';
+        let inactivityThreshold = 14;
+        let dateFrom = '';
+        let dateTo = '';
+        let selectedMemberId = null;
+
+        // Initialize System
+        function initSystem() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try { members = JSON.parse(saved); }
+                catch(e) { members = [...defaultRoster]; }
+            } else {
+                members = [...defaultRoster];
+                saveStorage();
+            }
+
+            setupEventListeners();
+            applyInactivityThresholds();
+            renderSystem();
+        }
+
+        function saveStorage() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(members));
+        }
+
+        function calculateDaysInactive(dateStr) {
+            if (!dateStr) return 0;
+            const diffMs = new Date() - new Date(dateStr);
+            return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+        }
+
+        function applyInactivityThresholds() {
+            members.forEach(m => {
+                const days = calculateDaysInactive(m.lastActive);
+                if (days >= inactivityThreshold && m.status === 'Active') {
+                    m.status = 'Inactive';
+                    if (!m.logs) m.logs = [];
+                    m.logs.unshift({ action: `Auto-flagged Inactive (${days}d inactive)`, date: daysAgoIso(0) });
+                }
+            });
+            saveStorage();
+        }
+
+        // Render Controller
+        function renderSystem() {
+            const filtered = members.filter(m => {
+                if (houseFilter !== 'all' && m.house !== houseFilter) return false;
+                if (rankFilter !== 'all' && m.rank !== rankFilter) return false;
+                if (statusFilter !== 'all' && m.status !== statusFilter) return false;
+
+                if (searchQuery) {
+                    const q = searchQuery.toLowerCase();
+                    const nameMatch = m.name.toLowerCase().includes(q);
+                    const houseMatch = m.house.toLowerCase().includes(q);
+                    const tagMatch = (m.leadTag || '').toLowerCase().includes(q);
+                    if (!nameMatch && !houseMatch && !tagMatch) return false;
+                }
+
+                if (dateFrom && new Date(m.lastActive) < new Date(dateFrom)) return false;
+                if (dateTo && new Date(m.lastActive) > new Date(dateTo)) return false;
+
+                return true;
+            });
+
+            updateKPIs();
+
+            if (currentView === 'sheet') {
+                renderSheetView(filtered);
+            } else if (currentView === 'kanban') {
+                renderKanbanView(filtered);
+            } else {
+                renderTableView(filtered);
+            }
+        }
+
+        function updateKPIs() {
+            const houses = ['The Eyrie', 'Casterlyrock', 'Sunspear', 'Dragonstone'];
+            const houseKeys = ['eyrie', 'casterly', 'sunspear', 'dragonstone'];
+
+            let totalGuild = members.length;
+            let totalActiveCount = 0;
+
+            houses.forEach((hName, idx) => {
+                const k = houseKeys[idx];
+                const hMembers = members.filter(m => m.house === hName);
+                const active = hMembers.filter(m => m.status === 'Active').length;
+                const inactive = hMembers.length - active;
+                const pct = hMembers.length ? Math.round((active / hMembers.length) * 100) : 0;
+
+                totalActiveCount += active;
+
+                document.getElementById(`stat-${k}-count`).textContent = hMembers.length;
+                document.getElementById(`stat-${k}-active`).textContent = active;
+                document.getElementById(`stat-${k}-inactive`).textContent = inactive;
+                document.getElementById(`stat-${k}-bar`).style.width = `${pct}%`;
+            });
+
+            const overallPct = totalGuild ? Math.round((totalActiveCount / totalGuild) * 100) : 0;
+            document.getElementById('stat-total-members').textContent = totalGuild;
+            document.getElementById('stat-overall-active-pct').textContent = `${overallPct}%`;
+            document.getElementById('stat-overall-bar').style.width = `${overallPct}%`;
+        }
+
+        function renderSheetView(filteredList) {
+            const houses = [
+                { name: 'The Eyrie', prefix: 'eyrie' },
+                { name: 'Casterlyrock', prefix: 'casterly' },
+                { name: 'Sunspear', prefix: 'sunspear' },
+                { name: 'Dragonstone', prefix: 'dragonstone' }
+            ];
+
+            houses.forEach(h => {
+                const hList = filteredList.filter(m => m.house === h.name);
+
+                // Leadership Roles
+                const dep = hList.find(m => m.rank === 'Leadership' && m.leadTag === 'Dep.');
+                const adm1 = hList.filter(m => m.rank === 'Leadership' && m.leadTag === 'Adm.')[0];
+                const adm2 = hList.filter(m => m.rank === 'Leadership' && m.leadTag === 'Adm.')[1];
+                const ast = hList.find(m => m.rank === 'Leadership' && m.leadTag === 'Ast.');
+
+                document.getElementById(`${h.prefix}-dep`).innerHTML = dep ? `<i class="fa-solid fa-feather text-[10px]"></i> <span class="cursor-pointer hover:underline" onclick="openMemberModal('${dep.id}')">Dep. ${escapeHtml(dep.name)}</span>` : '<span class="text-slate-600">Dep. ---</span>';
+                document.getElementById(`${h.prefix}-adm-1`).innerHTML = adm1 ? `<i class="fa-solid fa-user-shield text-[10px]"></i> <span class="cursor-pointer hover:underline" onclick="openMemberModal('${adm1.id}')">Adm. ${escapeHtml(adm1.name)}</span>` : '<span class="text-slate-600">Adm. ---</span>';
+                document.getElementById(`${h.prefix}-adm-2`).innerHTML = adm2 ? `<i class="fa-solid fa-user-shield text-[10px]"></i> <span class="cursor-pointer hover:underline" onclick="openMemberModal('${adm2.id}')">Adm. ${escapeHtml(adm2.name)}</span>` : '<span class="text-slate-600">Adm. ---</span>';
+                document.getElementById(`${h.prefix}-ast`).innerHTML = ast ? `<i class="fa-solid fa-user-tag text-[10px]"></i> <span class="cursor-pointer hover:underline" onclick="openMemberModal('${ast.id}')">Ast. ${escapeHtml(ast.name)}</span>` : '<span class="text-slate-600">Ast. ---</span>';
+
+                // Elders
+                const elders = hList.filter(m => m.rank === 'Elders');
+                const eldersGrid = document.getElementById(`${h.prefix}-elders-grid`);
+                eldersGrid.innerHTML = elders.length ? elders.map(e => `
+                    <div class="cursor-pointer hover:text-sky-400 ${e.status === 'Inactive' ? 'line-through-dim text-slate-500' : 'text-slate-200 light:text-slate-800'}" onclick="openMemberModal('${e.id}')">
+                        ${escapeHtml(e.name)}
+                    </div>
+                `).join('') : '<div class="text-slate-600 italic col-span-2">No Elders</div>';
+
+                // Pups Active vs Inactive
+                const pupsActive = hList.filter(m => m.rank === 'Pups' && m.status === 'Active');
+                const pupsInactive = hList.filter(m => m.rank === 'Pups' && m.status === 'Inactive');
+
+                document.getElementById(`${h.prefix}-active-count`).textContent = pupsActive.length;
+                document.getElementById(`${h.prefix}-inactive-count`).textContent = pupsInactive.length;
+
+                document.getElementById(`${h.prefix}-pups-active`).innerHTML = pupsActive.map(p => `
+                    <div class="cursor-pointer hover:text-sky-400 flex items-center justify-between" onclick="openMemberModal('${p.id}')">
+                        <span>${escapeHtml(p.name)}</span>
+                    </div>
+                `).join('');
+
+                document.getElementById(`${h.prefix}-pups-inactive`).innerHTML = pupsInactive.map(p => `
+                    <div class="cursor-pointer hover:text-rose-400 line-through-dim flex items-center justify-between" onclick="openMemberModal('${p.id}')">
+                        <span>${escapeHtml(p.name)}</span>
+                        <span class="text-[9px] font-normal no-underline opacity-70">${calculateDaysInactive(p.lastActive)}d</span>
+                    </div>
+                `).join('');
+            });
+        }
+
+        function renderKanbanView(filteredList) {
+            const grid = document.getElementById('kanban-grid');
+            const houses = ['The Eyrie', 'Casterlyrock', 'Sunspear', 'Dragonstone'];
+
+            grid.innerHTML = houses.map(hName => {
+                const hMembers = filteredList.filter(m => m.house === hName);
+                return `
+                    <div class="glass-panel border border-slate-800 light:border-slate-200 rounded-2xl p-4 flex flex-col space-y-3">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                            <h3 class="font-black text-sm text-slate-100 light:text-slate-900">${hName}</h3>
+                            <span class="px-2 py-0.5 rounded-full bg-slate-800 text-xs font-bold text-sky-400">${hMembers.length}</span>
+                        </div>
+                        <div class="space-y-2 overflow-y-auto max-h-[600px] pr-1">
+                            ${hMembers.map(m => `
+                                <div class="bg-slate-900 light:bg-slate-50 border border-slate-800 light:border-slate-200 rounded-xl p-3 cursor-pointer hover:border-sky-500 transition shadow-sm" onclick="openMemberModal('${m.id}')">
+                                    <div class="flex justify-between items-start">
+                                        <span class="font-extrabold text-xs text-slate-100 light:text-slate-900">${m.leadTag ? m.leadTag + ' ' : ''}${escapeHtml(m.name)}</span>
+                                        <span class="px-2 py-0.5 rounded text-[9px] font-bold ${m.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}">${m.status}</span>
+                                    </div>
+                                    <div class="mt-2 flex items-center justify-between text-[10px] text-slate-400">
+                                        <span>Rank: <strong class="text-slate-300 light:text-slate-700">${m.rank}</strong></span>
+                                        <span>${calculateDaysInactive(m.lastActive)}d inactive</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderTableView(filteredList) {
+            const tbody = document.getElementById('table-view-tbody');
+            tbody.innerHTML = filteredList.map(m => {
+                const daysInactive = calculateDaysInactive(m.lastActive);
+                return `
+                    <tr class="hover:bg-slate-800/40 light:hover:bg-slate-100 transition cursor-pointer" onclick="openMemberModal('${m.id}')">
+                        <td class="py-3 px-4 font-bold text-slate-100 light:text-slate-900">${escapeHtml(m.name)}</td>
+                        <td class="py-3 px-4 font-semibold text-sky-400">${m.house}</td>
+                        <td class="py-3 px-4">${m.rank}</td>
+                        <td class="py-3 px-4">${m.leadTag || '---'}</td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${m.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}">
+                                ${m.status}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-slate-300 light:text-slate-700">${m.lastActive}</td>
+                        <td class="py-3 px-4 font-mono ${daysInactive >= inactivityThreshold ? 'text-rose-400 font-bold' : 'text-slate-400'}">${daysInactive} days</td>
+                        <td class="py-3 px-4 text-right">
+                            <button onclick="event.stopPropagation(); toggleMemberStatus('${m.id}')" class="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-sky-400">
+                                <i class="fa-solid fa-power-off"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Modal Controls
+        function openMemberModal(id) {
+            const m = members.find(item => item.id === id);
+            if (!m) return;
+
+            selectedMemberId = id;
+
+            document.getElementById('modal-member-name').textContent = `${m.leadTag ? m.leadTag + ' ' : ''}${m.name}`;
+            document.getElementById('modal-member-house-rank').textContent = `${m.house} \u2022 ${m.rank}`;
+            document.getElementById('modal-member-avatar').textContent = m.name.charAt(0);
+
+            document.getElementById('modal-member-status').innerHTML = m.status === 'Active'
+                ? '<span class="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-bold text-xs"><i class="fa-solid fa-circle text-[8px] mr-1"></i>ACTIVE</span>'
+                : '<span class="px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 font-bold text-xs"><i class="fa-solid fa-circle text-[8px] mr-1"></i>INACTIVE</span>';
+
+            document.getElementById('modal-member-last-active').textContent = m.lastActive;
+            const days = calculateDaysInactive(m.lastActive);
+            document.getElementById('modal-member-inactivity-span').textContent = `${days} days`;
+
+            // Logs
+            const logsContainer = document.getElementById('modal-member-logs');
+            if (m.logs && m.logs.length) {
+                logsContainer.innerHTML = m.logs.map(l => `
+                    <div class="text-[11px] flex justify-between items-center">
+                        <span class="text-slate-200 light:text-slate-800 font-medium">${escapeHtml(l.action)}</span>
+                        <span class="text-slate-400 font-mono text-[10px]">${l.date}</span>
+                    </div>
+                `).join('');
+            } else {
+                logsContainer.innerHTML = '<p class="text-slate-500 text-[11px]">No activity logs stored.</p>';
+            }
+
+            document.getElementById('member-details-modal').classList.remove('hidden');
+        }
+
+        function closeDetailsModal() {
+            document.getElementById('member-details-modal').classList.add('hidden');
+            selectedMemberId = null;
+        }
+
+        function toggleMemberStatus(id) {
+            const m = members.find(item => item.id === id);
+            if (!m) return;
+
+            const now = daysAgoIso(0);
+            if (m.status === 'Active') {
+                m.status = 'Inactive';
+                showToast(`Flagged ${m.name} as Inactive`, 'warning');
+            } else {
+                m.status = 'Active';
+                m.lastActive = now;
+                showToast(`Activated ${m.name}`, 'success');
+            }
+
+            if (!m.logs) m.logs = [];
+            m.logs.unshift({ action: `Status changed to ${m.status}`, date: now });
+
+            saveStorage();
+            renderSystem();
+
+            if (selectedMemberId === id) openMemberModal(id);
+        }
+
+        function openAddMemberModal() {
+            document.getElementById('form-modal-title').textContent = 'Add New Guild Member';
+            document.getElementById('form-member-id').value = '';
+            document.getElementById('form-name').value = '';
+            document.getElementById('form-house').value = 'The Eyrie';
+            document.getElementById('form-rank').value = 'Pups';
+            document.getElementById('form-lead-tag').value = '';
+            document.getElementById('form-status').value = 'Active';
+            document.getElementById('form-last-active').value = daysAgoIso(0);
+
+            document.getElementById('member-form-modal').classList.remove('hidden');
+        }
+
+        function openEditMemberModal(id) {
+            const m = members.find(item => item.id === id);
+            if (!m) return;
+
+            document.getElementById('form-modal-title').textContent = 'Edit Member Record';
+            document.getElementById('form-member-id').value = m.id;
+            document.getElementById('form-name').value = m.name;
+            document.getElementById('form-house').value = m.house;
+            document.getElementById('form-rank').value = m.rank;
+            document.getElementById('form-lead-tag').value = m.leadTag || '';
+            document.getElementById('form-status').value = m.status;
+            document.getElementById('form-last-active').value = m.lastActive;
+
+            closeDetailsModal();
+            document.getElementById('member-form-modal').classList.remove('hidden');
+        }
+
+        function closeFormModal() {
+            document.getElementById('member-form-modal').classList.add('hidden');
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const editId = document.getElementById('form-member-id').value;
+            const name = document.getElementById('form-name').value.trim();
+            const house = document.getElementById('form-house').value;
+            const rank = document.getElementById('form-rank').value;
+            const leadTag = document.getElementById('form-lead-tag').value;
+            const status = document.getElementById('form-status').value;
+            const lastActive = document.getElementById('form-last-active').value || daysAgoIso(0);
+
+            const now = daysAgoIso(0);
+
+            if (editId) {
+                const m = members.find(item => item.id === editId);
+                if (m) {
+                    m.name = name;
+                    m.house = house;
+                    m.rank = rank;
+                    m.leadTag = leadTag;
+                    m.status = status;
+                    m.lastActive = lastActive;
+                    if (!m.logs) m.logs = [];
+                    m.logs.unshift({ action: 'Updated member info', date: now });
+                    showToast(`Updated member "${name}"`, 'info');
+                }
+            } else {
+                const newMember = {
+                    id: `MBR-${Math.floor(1000 + Math.random() * 9000)}`,
+                    name, house, rank, leadTag, status, lastActive,
+                    logs: [{ action: 'Added to Guild Roster', date: now }]
+                };
+                members.push(newMember);
+                showToast(`Added new member "${name}"`, 'success');
+            }
+
+            saveStorage();
+            closeFormModal();
+            renderSystem();
+        }
+
+        function deleteMember(id) {
+            const m = members.find(item => item.id === id);
+            if (!m) return;
+
+            if (confirm(`Remove member "${m.name}" from the roster?`)) {
+                members = members.filter(item => item.id !== id);
+                saveStorage();
+                closeDetailsModal();
+                renderSystem();
+                showToast(`Removed "${m.name}"`, 'warning');
+            }
+        }
+
+        // Export/Import Features
+        function exportCSV() {
+            const headers = ['ID', 'Name', 'House', 'Rank', 'Leadership Tag', 'Status', 'Last Active Date'];
+            const rows = members.map(m => [
+                m.id, `"${m.name}"`, `"${m.house}"`, m.rank, `"${m.leadTag || ''}"`, m.status, m.lastActive
+            ]);
+            const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+            
+            const link = document.createElement('a');
+            link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+            link.download = `Guild_Roster_${new Date().toISOString().slice(0, 10)}.csv`;
+            link.click();
+            showToast('Exported CSV file', 'success');
+        }
+
+        function exportJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(members, null, 2));
+            const dl = document.createElement('a');
+            dl.href = dataStr;
+            dl.download = `Guild_Roster_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+            dl.click();
+            showToast('Downloaded JSON Backup', 'success');
+        }
+
+        function importJSON(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const imported = JSON.parse(evt.target.result);
+                    if (Array.isArray(imported)) {
+                        members = imported;
+                        saveStorage();
+                        renderSystem();
+                        showToast('Roster JSON imported successfully', 'success');
+                    }
+                } catch(err) {
+                    showToast('Invalid JSON file format', 'warning');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function setupEventListeners() {
+            // Theme Toggle
+            document.getElementById('theme-toggle').addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+                document.documentElement.classList.toggle('light');
+            });
+
+            // View Mode Switching
+            const sheetBtn = document.getElementById('view-sheet-btn');
+            const kanbanBtn = document.getElementById('view-kanban-btn');
+            const tableBtn = document.getElementById('view-table-btn');
+
+            const viewSheet = document.getElementById('view-sheet-container');
+            const viewKanban = document.getElementById('view-kanban-container');
+            const viewTable = document.getElementById('view-table-container');
+
+            function setActiveViewBtn(activeBtn) {
+                [sheetBtn, kanbanBtn, tableBtn].forEach(btn => {
+                    btn.classList.remove('bg-sky-600', 'text-white', 'shadow');
+                    btn.classList.add('text-slate-400');
+                });
+                activeBtn.classList.add('bg-sky-600', 'text-white', 'shadow');
+                activeBtn.classList.remove('text-slate-400');
+            }
+
+            sheetBtn.addEventListener('click', () => {
+                currentView = 'sheet';
+                setActiveViewBtn(sheetBtn);
+                viewSheet.classList.remove('hidden');
+                viewKanban.classList.add('hidden');
+                viewTable.classList.add('hidden');
+                renderSystem();
+            });
+
+            kanbanBtn.addEventListener('click', () => {
+                currentView = 'kanban';
+                setActiveViewBtn(kanbanBtn);
+                viewKanban.classList.remove('hidden');
+                viewSheet.classList.add('hidden');
+                viewTable.classList.add('hidden');
+                renderSystem();
+            });
+
+            tableBtn.addEventListener('click', () => {
+                currentView = 'table';
+                setActiveViewBtn(tableBtn);
+                viewTable.classList.remove('hidden');
+                viewSheet.classList.add('hidden');
+                viewKanban.classList.add('hidden');
+                renderSystem();
+            });
+
+            // Filters
+            const searchInput = document.getElementById('search-input');
+            const clearSearchBtn = document.getElementById('clear-search-btn');
+
+            searchInput.addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+                if (searchQuery) clearSearchBtn.classList.remove('hidden');
+                else clearSearchBtn.classList.add('hidden');
+                renderSystem();
+            });
+
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                searchQuery = '';
+                clearSearchBtn.classList.add('hidden');
+                renderSystem();
+            });
+
+            document.getElementById('filter-house').addEventListener('change', (e) => {
+                houseFilter = e.target.value;
+                renderSystem();
+            });
+
+            document.getElementById('filter-rank').addEventListener('change', (e) => {
+                rankFilter = e.target.value;
+                renderSystem();
+            });
+
+            document.getElementById('filter-status').addEventListener('change', (e) => {
+                statusFilter = e.target.value;
+                renderSystem();
+            });
+
+            document.getElementById('filter-inactivity-days').addEventListener('change', (e) => {
+                inactivityThreshold = parseInt(e.target.value, 10);
+                document.getElementById('threshold-label').textContent = `${inactivityThreshold} Days`;
+                applyInactivityThresholds();
+                renderSystem();
+            });
+
+            document.getElementById('date-from').addEventListener('change', (e) => {
+                dateFrom = e.target.value;
+                renderSystem();
+            });
+
+            document.getElementById('date-to').addEventListener('change', (e) => {
+                dateTo = e.target.value;
+                renderSystem();
+            });
+
+            document.getElementById('reset-filters-btn').addEventListener('click', () => {
+                houseFilter = 'all';
+                rankFilter = 'all';
+                statusFilter = 'all';
+                searchQuery = '';
+                dateFrom = '';
+                dateTo = '';
+
+                document.getElementById('filter-house').value = 'all';
+                document.getElementById('filter-rank').value = 'all';
+                document.getElementById('filter-status').value = 'all';
+                document.getElementById('search-input').value = '';
+                document.getElementById('date-from').value = '';
+                document.getElementById('date-to').value = '';
+
+                renderSystem();
+            });
+
+            // System Menu Dropdown
+            const menuBtn = document.getElementById('system-menu-btn');
+            const menu = document.getElementById('system-menu');
+            menuBtn.addEventListener('click', () => menu.classList.toggle('hidden'));
+
+            document.getElementById('export-csv-btn').addEventListener('click', () => {
+                menu.classList.add('hidden');
+                exportCSV();
+            });
+
+            document.getElementById('export-json-btn').addEventListener('click', () => {
+                menu.classList.add('hidden');
+                exportJSON();
+            });
+
+            document.getElementById('import-json-input').addEventListener('change', (e) => {
+                menu.classList.add('hidden');
+                importJSON(e);
+            });
+
+            document.getElementById('print-snapshot-btn').addEventListener('click', () => {
+                menu.classList.add('hidden');
+                window.print();
+            });
+
+            document.getElementById('reset-default-data-btn').addEventListener('click', () => {
+                menu.classList.add('hidden');
+                if (confirm('Reset roster back to default spreadsheet state?')) {
+                    members = [...defaultRoster];
+                    saveStorage();
+                    renderSystem();
+                    showToast('Roster reset to original spreadsheet', 'info');
+                }
+            });
+
+            // Modal Handlers
+            document.getElementById('close-details-modal-btn').addEventListener('click', closeDetailsModal);
+            document.getElementById('modal-toggle-status-btn').addEventListener('click', () => {
+                if (selectedMemberId) toggleMemberStatus(selectedMemberId);
+            });
+            document.getElementById('modal-edit-btn').addEventListener('click', () => {
+                if (selectedMemberId) openEditMemberModal(selectedMemberId);
+            });
+            document.getElementById('modal-delete-btn').addEventListener('click', () => {
+                if (selectedMemberId) deleteMember(selectedMemberId);
+            });
+
+            document.getElementById('open-add-member-btn').addEventListener('click', openAddMemberModal);
+            document.getElementById('close-form-modal-btn').addEventListener('click', closeFormModal);
+            document.getElementById('cancel-form-btn').addEventListener('click', closeFormModal);
+            document.getElementById('member-form').addEventListener('submit', handleFormSubmit);
+        }
+
+        function showToast(msg, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastMsg.textContent = msg;
+
+            if (type === 'success') toastIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-base';
+            else if (type === 'warning') toastIcon.className = 'fa-solid fa-triangle-exclamation text-amber-400 text-base';
+            else toastIcon.className = 'fa-solid fa-circle-info text-sky-400 text-base';
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function escapeHtml(str) {
+            return (str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        window.addEventListener('DOMContentLoaded', initSystem);
+    </script>
+</body>
+</html>
